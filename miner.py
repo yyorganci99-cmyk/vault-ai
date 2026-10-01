@@ -11,7 +11,40 @@ from datetime import datetime
 
 st.set_page_config(page_title="Vault AI", layout="wide", page_icon="🏛️")
 
-# --- 0. THE IRONCLAD AUDIT DATABASE ---
+# --- 0. ZERO-TRUST AUTHENTICATION ---
+def check_password():
+    """Returns `True` if the user had the correct password."""
+    def password_entered():
+        if st.session_state["username"] == "admin" and st.session_state["password"] == "vault2026":
+            st.session_state["password_correct"] = True
+            del st.session_state["password"]  # Don't store password
+        else:
+            st.session_state["password_correct"] = False
+
+    if "password_correct" not in st.session_state:
+        st.title("🔒 Vault AI: Restricted Access")
+        st.text_input("Username", key="username")
+        st.text_input("Password", type="password", key="password")
+        st.button("Login", on_click=password_entered)
+        return False
+    
+    elif not st.session_state["password_correct"]:
+        st.title("🔒 Vault AI: Restricted Access")
+        st.text_input("Username", key="username")
+        st.text_input("Password", type="password", key="password")
+        st.button("Login", on_click=password_entered)
+        st.error("😕 Authentication failed. Unauthorized access logged.")
+        return False
+    
+    else:
+        return True
+
+# IF THE USER IS NOT LOGGED IN, STOP THE SCRIPT HERE.
+if not check_password():
+    st.stop()
+
+
+# --- 1. THE IRONCLAD AUDIT DATABASE ---
 def init_db():
     conn = sqlite3.connect('vault_audit.db')
     c = conn.cursor()
@@ -35,23 +68,21 @@ def log_to_database(doc_names, findings):
 # Start the database when the app boots
 init_db()
 
-# --- 1. THE NEURAL ENGINE ---
+# --- 2. THE NEURAL ENGINE ---
 @st.cache_resource
 def load_embedding_model():
     return SentenceTransformer('all-MiniLM-L6-v2')
 
 model = load_embedding_model()
 
-# --- 2. THE COCKPIT (SIDEBAR) ---
+# --- 3. THE COCKPIT (SIDEBAR) ---
 with st.sidebar:
     st.header("⚙️ Vault AI Control")
     st.success("🔒 System Secure: Air-Gapped & Audited")
     st.divider()
-    
-    # NEW: Toggle between the Scanner and the Audit Logs
     app_mode = st.radio("Terminal Mode:", ["🔍 Active Scanner", "🗄️ Compliance Audit Logs"])
 
-# --- 3. MAIN TERMINAL: ACTIVE SCANNER ---
+# --- 4. MAIN TERMINAL: ACTIVE SCANNER ---
 if app_mode == "🔍 Active Scanner":
     st.title("💼 Vault AI: Enterprise Edition")
     st.write("Neural Vision | Multi-Agent Verification | Cryptographic Logging")
@@ -141,11 +172,11 @@ if app_mode == "🔍 Active Scanner":
                 st.markdown(final_verified_debrief)
                 
             except Exception as e:
-                status.update(label="⚠️ Local Processing Error", state="error", expanded=True)
+                status.update(label="⚠️️ Local Processing Error", state="error", expanded=True)
                 st.error("Make sure the Ollama app is running in the background.")
                 st.caption(f"System Log: {e}")
 
-# --- 4. MAIN TERMINAL: COMPLIANCE AUDIT LOGS ---
+# --- 5. MAIN TERMINAL: COMPLIANCE AUDIT LOGS ---
 elif app_mode == "🗄️ Compliance Audit Logs":
     st.title("🗄️ System Audit Logs")
     st.write("Immutable record of all executing Due Diligence scans.")
